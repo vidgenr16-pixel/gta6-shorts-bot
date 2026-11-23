@@ -1,0 +1,16 @@
+# secrets: each person makes their own .env from .env.example
+.env
+
+# videos and bot state
+data/
+drop/*
+!drop/.gitkeep
+fonts/*
+!fonts/.gitkeep
+
+# python / OS junk
+__pycache__/
+*.pyc
+.venv/
+desktop.ini
+Thumbs.db
