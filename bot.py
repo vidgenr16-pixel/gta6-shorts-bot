@@ -15,6 +15,7 @@ import datetime as dt
 import json
 import logging
 import logging.handlers
+import re
 import shutil
 import sys
 import time
@@ -28,6 +29,7 @@ from telegram.ext import (
 
 import config
 import editor
+import youtube
 
 _handlers: list[logging.Handler] = [logging.StreamHandler()]
 _log_file = config.DATA / "bot.log"
@@ -92,10 +94,11 @@ async def send_preview(context: ContextTypes.DEFAULT_TYPE, m: dict):
         )
 
 
-async def edit_and_report(context: ContextTypes.DEFAULT_TYPE, src: Path, note: str):
+async def edit_and_report(context: ContextTypes.DEFAULT_TYPE, src: Path, note: str,
+                          count: int | None = None, title: str = ""):
     async with edit_lock:
         try:
-            made = await asyncio.to_thread(editor.make_shorts, src, note)
+            made = await asyncio.to_thread(editor.make_shorts, src, note, count, title)
         except Exception as e:  # noqa: BLE001 - report any render failure to the owner
             log.exception("editing failed")
             await context.bot.send_message(config.OWNER_ID, f"❌ Couldn't edit {src.name}: {e}")
@@ -163,7 +166,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🎮 GTA 6 Shorts Bot\n\n"
         "Send me gameplay clips (video or file, up to 20 MB). Add a caption to the video "
         "to tell me what happens, e.g. \"cop chase ends in the ocean\".\n"
-        "For bigger recordings, put them in the 'drop' folder next to my code (Google Drive works).\n\n"
+        "For bigger recordings, put them in the 'drop' folder next to my code (Google Drive works).\n"
+        "Or send a YouTube link (your own videos, or ones you have permission to reuse). "
+        "Add a number for how many shorts, e.g. \"https://youtu.be/abc 5\".\n\n"
         "I find the best moments, cut 9:16 shorts with a hook and word-by-word captions, "
         f"and post one every day at {load_settings()['post_time']} ({config.TIMEZONE}).\n\n"
         "/status  /queue  /postnow  /settime HH:MM  /hook <id> <text>  /skip <id>"
@@ -257,6 +262,49 @@ async def on_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.application.create_task(edit_and_report(context, dest, msg.caption or ""))
 
 
+@owner_only
+async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """A YouTube link (optionally followed by a number and a note) becomes shorts."""
+    msg = update.message
+    url = youtube.find_url(msg.text)
+    if not url:
+        await msg.reply_text("Send me a gameplay clip or a YouTube link. /start shows everything I can do.")
+        return
+    rest = youtube.URL_RE.sub(" ", msg.text)
+    count = None
+    m = re.match(r"\s*(\d{1,2})(?:\s*(?:shorts?|clips?))?\b", rest, re.IGNORECASE)
+    if m and 1 <= int(m.group(1)) <= 10:  # only a number right after the link, so "GTA 6" isn't a count
+        count = int(m.group(1))
+        rest = rest[m.end():]
+    note = " ".join(rest.split())
+    await msg.reply_text("⬇️ Downloading from YouTube…")
+    context.application.create_task(download_and_edit(context, url, note, count))
+
+
+async def download_and_edit(context: ContextTypes.DEFAULT_TYPE, url: str, note: str, count: int | None):
+    try:
+        video = await asyncio.to_thread(youtube.download, url)
+    except youtube.TooLong as e:
+        await context.bot.send_message(config.OWNER_ID, f"⚠️ {e}")
+        return
+    except Exception as e:  # noqa: BLE001 - yt-dlp raises many error types; report them all
+        log.exception("YouTube download failed")
+        await context.bot.send_message(
+            config.OWNER_ID,
+            f"❌ Couldn't download that video: {e}\n\n"
+            "If it's private or age-restricted I can't get it. If YouTube changed something, "
+            "restarting the bot updates the downloader.",
+        )
+        return
+    mins, secs = divmod(int(video.duration), 60)
+    await context.bot.send_message(
+        config.OWNER_ID,
+        f"🎬 Downloaded \"{video.title}\" ({mins}:{secs:02d}). "
+        f"Making {count or 'the best'} short{'s' if count != 1 else ''}…",
+    )
+    await edit_and_report(context, video.path, note, count, video.title)
+
+
 async def on_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     if q.from_user.id != config.OWNER_ID:
@@ -314,6 +362,7 @@ def main():
     app.add_handler(CommandHandler("hook", set_hook))
     app.add_handler(CommandHandler("skip", skip))
     app.add_handler(MessageHandler(filters.VIDEO | filters.Document.VIDEO, on_video))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_text))
     app.add_handler(CallbackQueryHandler(on_button))
     if config.OWNER_ID:
         schedule_daily(app, load_settings()["post_time"])

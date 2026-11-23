@@ -3,6 +3,8 @@
 $app = Split-Path -Parent $MyInvocation.MyCommand.Path
 $py = 'C:\gta6bot\.venv\Scripts\python.exe'
 Set-Location $app
+# YouTube changes often; keep the downloader current
+& $py -m pip install -q -U yt-dlp 2>$null
 while ($true) {
     & $py bot.py
     if ($LASTEXITCODE -eq 3) { break }  # another copy is already running

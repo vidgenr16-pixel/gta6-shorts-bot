@@ -56,7 +56,7 @@ def _fallback(note: str) -> dict:
     }
 
 
-def write_copy(transcript: str, note: str = "", recent_hooks: list[str] | None = None) -> dict:
+def write_copy(transcript: str, note: str = "", recent_hooks: list[str] | None = None, title: str = "") -> dict:
     if not config.ANTHROPIC_API_KEY:
         return _fallback(note)
 
@@ -64,6 +64,7 @@ def write_copy(transcript: str, note: str = "", recent_hooks: list[str] | None =
 
     prompt = (
         f"Creator's note: {note or '(none)'}\n"
+        f"Title of the full video this clip was cut from: {title or '(none)'}\n"
         f"Transcript of the clip's audio (may be game dialogue, radio or noise):\n{transcript or '(no speech detected)'}\n"
         f"Hooks used on recent posts, don't repeat them: {', '.join(recent_hooks or []) or '(none)'}"
     )

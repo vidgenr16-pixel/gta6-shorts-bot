@@ -4,3 +4,4 @@ anthropic>=2.10
 numpy
 python-dotenv
 tzdata
+yt-dlp

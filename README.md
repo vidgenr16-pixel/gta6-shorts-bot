@@ -69,6 +69,7 @@ there from your phone get edited automatically.
 | Do this | Result |
 |---|---|
 | Send a video, with a caption like "cop chase ends in the ocean" | Edits it; the caption steers the hook |
+| Send a YouTube link, e.g. `https://youtu.be/abc123 5 heist gone wrong` | Downloads it and makes 5 shorts from its best moments (the number and note are optional). Use your own videos or ones you have permission to reuse; reposting other people's videos gets copyright strikes. Needs Node.js (`winget install OpenJS.NodeJS.LTS`) |
 | Recording over 20 MB | Put it in the `drop` folder next to the code (in Google Drive, so your phone works too). The bot picks it up within a minute (Telegram won't let bots download files over 20 MB) |
 | `/queue` | Lists the queued shorts and their ids |
 | `/status` | Shows queue size and the next post time |

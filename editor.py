@@ -244,11 +244,18 @@ def recent_hooks(n: int = 15) -> list[str]:
     return [m["hook"] for m in metas[:n]]
 
 
-def make_shorts(src: Path, note: str = "") -> list[dict]:
-    """Cut `src` into one or more finished shorts in data/ready/<id>/. Returns their metadata."""
+def make_shorts(src: Path, note: str = "", count: int | None = None, title: str = "") -> list[dict]:
+    """Cut `src` into one or more finished shorts in data/ready/<id>/. Returns their metadata.
+
+    count: how many shorts to make (default: based on length, up to MAX_SHORTS_PER_VIDEO).
+    title: the source video's title (e.g. from YouTube), given to the copywriter as context.
+    """
     info = probe(src)
     length = min(config.CLIP_SECONDS, info.duration)
-    count = max(1, min(config.MAX_SHORTS_PER_VIDEO, int(info.duration // (config.CLIP_SECONDS * 3))))
+    if count:
+        count = max(1, min(count, int(info.duration // length)))
+    else:
+        count = max(1, min(config.MAX_SHORTS_PER_VIDEO, int(info.duration // (config.CLIP_SECONDS * 3))))
     results = []
     for start in pick_segments(src, info, length, count):
         sid = time.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:4]
@@ -256,7 +263,7 @@ def make_shorts(src: Path, note: str = "") -> list[dict]:
         work.mkdir(parents=True)
         try:
             words = transcribe(src, start, length, work) if info.has_audio else []
-            copy = copywriter.write_copy(" ".join(w["text"] for w in words), note, recent_hooks())
+            copy = copywriter.write_copy(" ".join(w["text"] for w in words), note, recent_hooks(), title)
             out_dir = config.READY / sid
             out_dir.mkdir(parents=True)
             render(src, info, start, length, copy["hook"], words, out_dir / "short.mp4", work)

@@ -26,6 +26,7 @@ TIMEZONE = os.getenv("TIMEZONE", "UTC")  # e.g. Asia/Kolkata, America/New_York
 # Editing
 CLIP_SECONDS = _int("CLIP_SECONDS", 30)  # length of each short
 MAX_SHORTS_PER_VIDEO = _int("MAX_SHORTS_PER_VIDEO", 3)  # long recordings get cut into several shorts
+MAX_YT_MINUTES = _int("MAX_YT_MINUTES", 180)  # longest YouTube video the bot will download
 FG_ZOOM = _float("FG_ZOOM", 1.25)  # how much to zoom landscape gameplay inside the 9:16 frame
 MUSIC_VOLUME = _float("MUSIC_VOLUME", 0.12)  # background music level (drop mp3s in data/music)
 CAPTION_FONT = os.getenv("CAPTION_FONT", "Arial Black")
