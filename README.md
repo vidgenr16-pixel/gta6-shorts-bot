@@ -26,7 +26,12 @@ The code can live anywhere, including Google Drive. The Python environment and t
 working videos live in `C:\gta6bot`, which keeps Drive from syncing big temporary files
 and keeps the path short (Whisper's DLL won't load from very deep folders).
 
-1. Install Python 3.11+ and ffmpeg (`winget install Gyan.FFmpeg`).
+Everyone runs their own copy with their own Telegram bot; one bot only answers its owner.
+
+1. Install Python 3.11+, ffmpeg and Git:
+   `winget install Python.Python.3.12 Gyan.FFmpeg Git.Git`.
+   Then get the code: `git clone https://github.com/vidgenr16-pixel/gta6-shorts-bot`
+   (or on GitHub click **Code → Download ZIP** and unzip it).
 2. Copy `.env.example` to `.env`. In Telegram, open **@BotFather**, send `/newbot`,
    and paste the token after `TELEGRAM_BOT_TOKEN=` in `.env`.
 3. Double-click `start-bot.bat`. The first run installs everything into `C:\gta6bot`.
