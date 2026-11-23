@@ -41,9 +41,9 @@ CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-opus-5-5")
 # Working videos live in DATA_DIR (keep it off Google Drive so Drive isn't syncing big temp files)
 DATA = Path(os.getenv("DATA_DIR", "") or ROOT / "data")
 SOURCES = DATA / "sources"  # raw clips you sent
-# Big recordings go here (Telegram bots can't download files > 20 MB). It sits next to the code,
-# so if the code is in Google Drive you can upload recordings to it from your phone too.
-DROP = ROOT / "drop"
+# Big recordings go here (Telegram bots can't download files > 20 MB). Point DROP_DIR at a
+# Google Drive folder to upload recordings from your phone.
+DROP = Path(os.getenv("DROP_DIR", "") or ROOT / "drop")
 READY = DATA / "ready"  # finished shorts waiting to be posted
 POSTED = DATA / "posted"
 MUSIC = DATA / "music"
@@ -51,5 +51,9 @@ WORK = DATA / "work"
 FONTS = ROOT / "fonts"  # optional: drop .ttf files here and set CAPTION_FONT to their name
 SETTINGS_FILE = DATA / "settings.json"
 
-for d in (SOURCES, DROP, READY, POSTED, MUSIC, WORK, FONTS):
+for d in (SOURCES, READY, POSTED, MUSIC, WORK, FONTS):
     d.mkdir(parents=True, exist_ok=True)
+try:  # DROP may be on Google Drive, which isn't mounted until Drive starts
+    DROP.mkdir(parents=True, exist_ok=True)
+except OSError:
+    pass

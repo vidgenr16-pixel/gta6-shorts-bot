@@ -45,8 +45,24 @@ Everyone runs their own copy with their own Telegram bot; one bot only answers i
 
 Finished shorts are in `C:\gta6bot\data\ready` (queued) and `C:\gta6bot\data\posted`.
 
-Keep the bot running (leave the window open, or use Task Scheduler "at log on") so the
-daily post goes out.
+## Run it in the background (recommended)
+
+Once it works with `start-bot.bat`, close that window and run this once in PowerShell
+from the project folder:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install-autostart.ps1
+```
+
+The bot then runs hidden, starts whenever you log in to Windows and restarts itself
+if it crashes. Its log is `C:\gta6bot\data\bot.log`. To turn this off:
+`powershell -ExecutionPolicy Bypass -File .\install-autostart.ps1 -Remove`.
+
+The PC has to be on and awake at post time, so set Windows Sleep to "Never" while
+plugged in, or pick a post time when the PC is usually on.
+
+Optional: set `DROP_DIR` in `.env` to a Google Drive folder. Recordings you upload
+there from your phone get edited automatically.
 
 ## Using it
 

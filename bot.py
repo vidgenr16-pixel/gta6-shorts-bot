@@ -14,7 +14,9 @@ import asyncio
 import datetime as dt
 import json
 import logging
+import logging.handlers
 import shutil
+import sys
 import time
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -27,7 +29,10 @@ from telegram.ext import (
 import config
 import editor
 
-logging.basicConfig(format="%(asctime)s %(levelname)s %(name)s: %(message)s", level=logging.INFO)
+_handlers: list[logging.Handler] = [logging.StreamHandler()]
+_log_file = config.DATA / "bot.log"
+_handlers.append(logging.handlers.RotatingFileHandler(_log_file, maxBytes=2_000_000, backupCount=3, encoding="utf-8"))
+logging.basicConfig(format="%(asctime)s %(levelname)s %(name)s: %(message)s", level=logging.INFO, handlers=_handlers)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 log = logging.getLogger("bot")
 
@@ -128,6 +133,8 @@ async def daily_post(context: ContextTypes.DEFAULT_TYPE):
 
 async def scan_drop_folder(context: ContextTypes.DEFAULT_TYPE):
     """Big recordings (> 20 MB) can't go through Telegram; drop them in the drop folder instead."""
+    if not config.DROP.is_dir():  # e.g. Google Drive not mounted yet
+        return
     for p in sorted(config.DROP.iterdir()):
         if p.suffix.lower() not in VIDEO_EXT:
             continue
@@ -272,7 +279,28 @@ async def on_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await q.edit_message_reply_markup(None)
 
 
+ALREADY_RUNNING = 3
+_lock_handle = None
+
+
+def single_instance():
+    """Two copies polling the same bot make Telegram reject both, so only allow one."""
+    global _lock_handle
+    _lock_handle = open(config.DATA / "bot.lock", "a+")
+    try:
+        if sys.platform == "win32":
+            import msvcrt
+            msvcrt.locking(_lock_handle.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(_lock_handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        log.error("The bot is already running (another window or the background task). Exiting.")
+        sys.exit(ALREADY_RUNNING)
+
+
 def main():
+    single_instance()
     if not config.BOT_TOKEN:
         raise SystemExit("Set TELEGRAM_BOT_TOKEN in .env first (see README.md).")
     if not config.OWNER_ID:
